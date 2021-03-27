@@ -1,4 +1,4 @@
-export const blobToBase64 = (blob: any) => {
+export const blobToBase64 = (blob: any): Promise<unknown> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
