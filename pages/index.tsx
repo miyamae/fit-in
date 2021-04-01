@@ -2,38 +2,38 @@ import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import Cropper from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
-import styled from 'styled-components';
 import {
-  IconButton,
   Typography,
   Link,
   Box,
   Grid,
   Button,
   ButtonGroup,
-  Slider,
   InputAdornment,
   TextField,
 } from '@material-ui/core';
-import { ZoomIn, ZoomOut, RotateLeft, RotateRight } from '@material-ui/icons';
+import { ToggleButton } from '@material-ui/lab';
+import {
+  ZoomIn,
+  ZoomOut,
+  RotateLeft,
+  RotateRight,
+  Crop,
+  OpenWith,
+  SwapHoriz,
+  SwapVert,
+} from '@material-ui/icons';
 import { blobToBase64 } from '../lib/blob-to-base64';
 import Layout from './components/layout';
-
-const SmallTextField = styled(TextField)`
-  .MuiInputBase-root {
-    width: 70px;
-  }
-  input {
-    padding: 2px;
-    font-size: 0.8rem;
-  }
-`;
+import InputSlider from './components/input-slider';
 
 export default function Home() {
   const [srcImage, setSrcImage] = useState<string>();
+  const [moveMode, setMoveMode] = useState<boolean>(false);
+  const [cropData, setCropData] = useState<any>({});
   const [blobUrl, setBlobUrl] = useState<string>();
   const [zoom, setZoom] = useState<number>(1.0);
-  const [rotate, setRotate] = useState<number>(1.0);
+  const [rotate, setRotate] = useState<number>(0);
   const { register, handleSubmit, errors } = useForm();
 
   const cropperRef = useRef<HTMLImageElement>(null);
@@ -56,31 +56,31 @@ export default function Home() {
   const handleZoom = (event: Cropper.ZoomEvent<HTMLImageElement>): void => {
     setZoom(event.detail.ratio as number);
   };
-  const handleChangeZoom = (_event: React.ChangeEvent<{}>, newValue: number | number[]): void => {
-    cropper.zoomTo(newValue);
+
+  const handleCrop = (event: Cropper.CropEvent<HTMLImageElement>): void => {
+    setCropData(event.detail);
   };
-  const zoomIn = (): void => {
-    cropper.zoom(0.1);
-  };
-  const zoomOut = (): void => {
-    cropper.zoom(-0.1);
-  };
-  const handleInputZoom = (event: React.ChangeEvent<HTMLTextAreaElement>): void => {
-    cropper.zoomTo(event.target.value);
+
+  const setZoomValue = (value: number): void => {
+    cropper.zoomTo(value);
   };
 
   const setRotateValue = (value: number): void => {
     setRotate(value);
     cropper.rotateTo(value);
   };
-  const handleChangeRotate = (_event: React.ChangeEvent<{}>, newValue: number | number[]): void => {
-    setRotateValue(newValue as number);
+
+  const toggleMoveMode = (): void => {
+    cropper.setDragMode(moveMode ? 'crop' : 'move');
+    setMoveMode(!moveMode);
   };
-  const rotateRight = (): void => {
-    setRotateValue(cropper.getData().rotate + 5);
+
+  const swapHoriz = (): void => {
+    cropper.scaleX(cropper.getData().scaleX * -1);
   };
-  const rotateLeft = (): void => {
-    setRotateValue(cropper.getData().rotate - 5);
+
+  const swapVert = (): void => {
+    cropper.scaleY(cropper.getData().scaleY * -1);
   };
 
   return (
@@ -102,85 +102,9 @@ export default function Home() {
             Download
           </Link>
         </p>
-        <Grid container>
-          <ButtonGroup color="primary" aria-label="outlined primary button group">
-            <Button>移動</Button>
-            <Button>切取</Button>
-          </ButtonGroup>
-          &nbsp;
-          <ButtonGroup color="primary" aria-label="outlined primary button group">
-            <Button onClick={zoomIn}>拡大</Button>
-            <Button onClick={zoomOut}>縮小</Button>
-          </ButtonGroup>
-          &nbsp;
-          <ButtonGroup color="primary" aria-label="outlined primary button group">
-            <Button>左回</Button>
-            <Button>右回</Button>
-          </ButtonGroup>
-          &nbsp;
-          <ButtonGroup color="primary" aria-label="outlined primary button group">
-            <Button>上下</Button>
-            <Button>左右</Button>
-          </ButtonGroup>
-        </Grid>
+
         <Grid container spacing={2}>
-          <Grid item xs={4}>
-            <Grid container>
-              <Grid item>
-                <IconButton size="small" onClick={zoomOut}>
-                  <ZoomOut />
-                </IconButton>
-              </Grid>
-              <Grid item xs>
-                <Slider min={0.1} max={5.0} step={0.01} value={zoom} onChange={handleChangeZoom} />
-              </Grid>
-              <Grid item>
-                <IconButton size="small" onClick={zoomIn}>
-                  <ZoomIn />
-                </IconButton>
-              </Grid>
-              <Grid item>
-                <SmallTextField
-                  type="number"
-                  value={zoom}
-                  onChange={handleInputZoom}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                  }}
-                />
-              </Grid>
-            </Grid>
-          </Grid>
-          <Grid item xs={4}>
-            <Grid container>
-              <Grid item>
-                <IconButton size="small" onClick={rotateLeft} disabled={rotate <= -180}>
-                  <RotateLeft />
-                </IconButton>
-              </Grid>
-              <Grid item xs>
-                <Slider
-                  min={-180}
-                  max={180}
-                  step={1}
-                  value={rotate}
-                  onChange={handleChangeRotate}
-                />
-              </Grid>
-              <Grid item>
-                <IconButton size="small" onClick={rotateRight} disabled={rotate >= 180}>
-                  <RotateRight />
-                </IconButton>
-              </Grid>
-            </Grid>
-          </Grid>
-        </Grid>
-        <br />
-        [left],[top] : [width] x [height]
-        <br />
-        resize: [width] x [height]
-        <Grid container spacing={2}>
-          <Grid item xs={9}>
+          <Grid item xs={8}>
             <Cropper
               src={srcImage}
               style={{ height: 600, width: '100%' }}
@@ -188,20 +112,123 @@ export default function Home() {
               guides={true}
               zoom={handleZoom}
               ref={cropperRef}
+              dragMode="crop"
+              toggleDragModeOnDblclick={false}
+              crop={handleCrop}
             />
           </Grid>
-          <Grid item xs={3}>
-            <div
-              className="preview"
-              style={{
-                display: 'inline-block',
-                boxSizing: 'border-box',
-                border: '1px solid black',
-                width: '100%',
-                height: '300px',
-                overflow: 'hidden',
-              }}
+          <Grid item xs={4}>
+            <div style={{ height: 200 }}>
+              <div
+                className="preview"
+                style={{
+                  display: 'block',
+                  boxSizing: 'border-box',
+                  background: 'black',
+                  width: 200,
+                  height: 200,
+                  overflow: 'hidden',
+                }}
+              />
+            </div>
+            <Grid container spacing={2}>
+              <Grid item>
+                <ButtonGroup color="primary" aria-label="outlined primary button group">
+                  <ToggleButton onClick={toggleMoveMode} selected={moveMode}>
+                    <OpenWith />
+                  </ToggleButton>
+                  <ToggleButton onClick={toggleMoveMode} selected={!moveMode}>
+                    <Crop />
+                  </ToggleButton>
+                  <Button onClick={swapHoriz}>
+                    <SwapHoriz />
+                  </Button>
+                  <Button onClick={swapVert}>
+                    <SwapVert />
+                  </Button>
+                </ButtonGroup>
+              </Grid>
+            </Grid>
+            <InputSlider
+              setValue={setZoomValue}
+              value={zoom}
+              min={0.1}
+              max={5.0}
+              step={0.01}
+              incStep={0.1}
+              IncIcon={ZoomIn}
+              DecIcon={ZoomOut}
+              unit="%"
             />
+            <InputSlider
+              setValue={setRotateValue}
+              value={rotate}
+              min={-180}
+              max={180}
+              step={1}
+              incStep={1}
+              IncIcon={RotateRight}
+              DecIcon={RotateLeft}
+              unit="°"
+            />
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <TextField
+                  label="幅(W)"
+                  type="number"
+                  value={Math.round(cropData.width)}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">px</InputAdornment>,
+                  }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="高さ(H)"
+                  type="number"
+                  value={Math.round(cropData.height)}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">px</InputAdornment>,
+                  }}
+                />
+              </Grid>
+            </Grid>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <TextField
+                  label="左位置(X)"
+                  type="number"
+                  value={Math.round(cropData.x)}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">px</InputAdornment>,
+                  }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="上位置(Y)"
+                  type="number"
+                  value={Math.round(cropData.y)}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">px</InputAdornment>,
+                  }}
+                />
+              </Grid>
+            </Grid>
+            <br />
+            resize: [width] x [height]
           </Grid>
         </Grid>
       </Box>
